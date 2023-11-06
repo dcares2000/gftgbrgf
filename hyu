@@ -1,1 +1,199 @@
-fddguhj
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расширенный Мебельный Калькулятор</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #16212e;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .input-section, .results-section {
+            width: 48%;
+        }
+        .input-group, .results {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #1d2a3a;
+            border-radius: 5px;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background-color: #2e3b4e;
+            color: #fff;
+        }
+        button {
+            background-color: #4caf50;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #fff;
+            text-align: left;
+        }
+        th {
+            background-color: #1d2a3a;
+        }
+        td {
+            background-color: #2e3b4e;
+        }
+        .error {
+            color: #ff6666;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .detail-item button {
+            margin-left: 10px;
+            background-color: #f44336;
+        }
+        .detail-item button:hover {
+            background-color: #d32f2f;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex-container">
+        <div class="input-section">
+            <!-- Форма ввода данных -->
+            <div class="input-group">
+                <label for="ldspLength">Длина листа ЛДСП (см):</label>
+                <input type="number" id="ldspLength" min="0">
+            </div>
+            <div class="input-group">
+                <label for="ldspWidth">Ширина листа ЛДСП (см):</label>
+                <input type="number" id="ldspWidth" min="0">
+            </div>
+            <div class="input-group">
+                <label for="ldspPrice">Цена листа ЛДСП (KZT):</label>
+                <input type="number" id="ldspPrice" min="0">
+            </div>
+            <button class="button" onclick="addDetail()">Добавить деталь</button>
+            <button class="button" onclick="calculateOptimized()">Рассчитать</button>
+            <button class="button" onclick="clearAll()">Очистить</button>
+            <div id="detailsList"></div>
+        </div>
+<div class="results-section">
+    <div class="results" id="results">
+        <h2>Результаты</h2>
+        <p>Количество листов ЛДСП: <span id="sheetsCount">0</span></p>
+        <p>Общая стоимость мебели (KZT): <span id="totalPrice">0</span></p>
+        <p>Процент обрезков: <span id="wastePercentage">0</span></p>
+    </div>
+</div>
+    </div>
+    <script>
+        let details = [];
+
+        function addDetail() {
+            let detailsDiv = document.getElementById('detailsList');
+            let detailDiv = document.createElement('div');
+            detailDiv.classList.add('detail-item');
+            detailDiv.innerHTML = `
+                <input type="text" placeholder="Название детали">
+                <input type="number" min="0" placeholder="Длина детали (см)">
+                <input type="number" min="0" placeholder="Ширина детали (см)">
+                <button onclick="removeDetail(this)">Удалить</button>
+            `;
+            detailsDiv.appendChild(detailDiv);
+        }
+
+        function removeDetail(button) {
+            let detailItem = button.parentNode;
+            detailItem.parentNode.removeChild(detailItem);
+        }
+
+function calculateOptimized() {
+    let sheetLength = Number(document.getElementById("ldspLength").value) - 10; // учет обрезки краев
+    let sheetWidth = Number(document.getElementById("ldspWidth").value) - 10; // учет обрезки краев
+    let sheetPrice = Number(document.getElementById("ldspPrice").value);
+    let totalSheets = 0;
+    let totalPrice = 0;
+    let wastePercentage = 0;
+
+    if (sheetLength <= 0 || sheetWidth <= 0 || sheetPrice <= 0) {
+        alert("Введите корректные данные для листа ЛДСП.");
+        return;
+    }
+
+    details = Array.from(document.getElementById('detailsList').children).map(detailDiv => ({
+        length: Number(detailDiv.children[1].value) + 4, // учет зазора
+        width: Number(detailDiv.children[2].value) + 4 // учет зазора
+    }));
+
+    details.sort((a, b) => b.length * b.width - a.length * a.width);
+    let totalWasteArea = 0;
+    let totalUsedArea = 0;
+
+    while (details.length > 0) {
+        let currentSheetUsedArea = 0;
+        let remainingLength = sheetLength;
+        let remainingWidth = sheetWidth;
+        
+        details = details.filter(detail => {
+            if (detail.length <= remainingLength && detail.width <= sheetWidth) {
+                currentSheetUsedArea += detail.length * detail.width;
+                remainingLength -= detail.length;
+                return false;
+            } else if (detail.width <= remainingWidth && detail.length <= sheetLength) {
+                currentSheetUsedArea += detail.length * detail.width;
+                remainingWidth -= detail.width;
+                return false;
+            }
+            return true;
+        });
+
+        totalSheets++;
+        totalPrice += sheetPrice;
+        let currentSheetArea = sheetLength * sheetWidth;
+        totalUsedArea += currentSheetUsedArea;
+        totalWasteArea += currentSheetArea - currentSheetUsedArea;
+    }
+
+    if (totalSheets > 0) {
+        wastePercentage = (totalWasteArea / (totalSheets * sheetLength * sheetWidth)) * 100;
+    }
+
+    document.getElementById("sheetsCount").textContent = totalSheets;
+    document.getElementById("totalPrice").textContent = totalPrice.toFixed(2);
+    document.getElementById("wastePercentage").textContent = wastePercentage.toFixed(2) + '%';
+}
+
+
+        function clearAll() {
+            document.getElementById('ldspLength').value = '';
+            document.getElementById('ldspWidth').value = '';
+            document.getElementById('ldspPrice').value = '';
+            document.getElementById('detailsList').innerHTML = '';
+            document.getElementById('sheetsCount').textContent = '0';
+            document.getElementById('totalPrice').textContent = '0';
+        }
+    </script>
+</body>
+</html>
